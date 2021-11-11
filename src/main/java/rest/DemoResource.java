@@ -20,6 +20,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.security.RolesAllowed;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -42,8 +44,8 @@ import utils.api.MakeOptions;
  */
 @Path("info")
 public class DemoResource {
-    
     private static final EntityManagerFactory EMF = EMF_Creator.createEntityManagerFactory();
+    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     @Context
     private UriInfo context;
 
@@ -76,40 +78,46 @@ public class DemoResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Path("threads")
     public void getFromThreads(@Suspended final AsyncResponse ar) {
-        ExecutorService executor = Executors.newCachedThreadPool();
-        List<Future<String>> futures = new ArrayList<>();
-        List<String> results = new ArrayList<>();
-        LinkedHashMap<String, MakeOptions> urls = new LinkedHashMap<>();
-        Gson gson = new GsonBuilder().create();
+        //Make options to get possibility to switch between methods and headers if needed.
         MakeOptions makeOptions = new MakeOptions("GET");
+        
+        //LinkedHashMap to ensure the correct order as opposite to normal hashmap
+        //Key = URL to be fetched
+        //Value = the options for the fetch
+        LinkedHashMap<String, MakeOptions> urls = new LinkedHashMap<>();
         urls.put("https://cdn.jsdelivr.net/gh/fawazahmed0/currency-api@1/latest/currencies.json", makeOptions);
         urls.put("https://www.metaweather.com/api/location/search/?query=london", makeOptions);
         new Thread(() -> {
-            String res1= null;
-            String res2= null;
+            List<String> results = new ArrayList<>();
+            
+            //Fetches data
             try {
+              ExecutorService executor = Executors.newCachedThreadPool();
+              List<Future<String>> futures = new ArrayList<>();
+              for (Map.Entry<String, MakeOptions> url : urls.entrySet()) {
+                Future<String> future = executor.submit(new ApiFetchCallable(url.getKey(), url.getValue()));
+                futures.add(future);
+              }
               
-               
-                for (Map.Entry<String, MakeOptions> url : urls.entrySet()) {
-                    Future<String> future = executor.submit(new ApiFetchCallable(url.getKey(), url.getValue()));
-                    futures.add(future);
-                }
                 //Get the results
                 for (Future<String> future : futures) {
                     String str = future.get();
                     results.add(str);
                 }
-            } catch (Exception e) {
-                String err = e.getMessage();
-                System.out.println("Error: "+e );
+            } catch (Exception ex) {
+                Logger.getLogger(DemoResource.class.getName()).log(Level.SEVERE, null, ex);
             }
             
             
-            
+            //Converts json data to desired DTO's
             CurrencyApiDTO currencyApiDTO = gson.fromJson(results.get(0), CurrencyApiDTO.class);
-            WeatherDTO[] weatherDTOArray  = gson.fromJson(results.get(1), WeatherDTO[].class); //If resonsonse is in []
+            //If resonsonse is in []
+            WeatherDTO[] weatherDTOArray  = gson.fromJson(results.get(1), WeatherDTO[].class);
             
+            //Merges DTO's to desired end result
             CombinedApiDTO combinedApiDTO = new CombinedApiDTO(weatherDTOArray[0],currencyApiDTO);
+            
+            //Returns data in json
             ar.resume(gson.toJson(combinedApiDTO));
         }).start();
     }
