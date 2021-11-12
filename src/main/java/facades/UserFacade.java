@@ -53,10 +53,19 @@ public class UserFacade {
        EntityManager em = emf.createEntityManager();
         try {
             em.getTransaction().begin();
-            user.getRoleList().forEach(role->{
+            
+            //Throws error if username exists
+            if(em.find(User.class, user.getUserName()) != null){
+                throw new NotFoundException("Username already exists");
+            }
+            //Makes sure roles is managed objects and checks that it exist
+            for (int i = 0; i < user.getRoleList().size(); i++) {
+                Role role = user.getRoleList().get(i);
                 role = em.find(Role.class, role.getRoleName());
-                //TODO: Do something if role doesnt exist 
-            });
+                if(role == null){
+                    throw new NotFoundException("Role doesn't exist");
+                }
+            }
             em.persist(user);
             em.getTransaction().commit();
         } finally {
