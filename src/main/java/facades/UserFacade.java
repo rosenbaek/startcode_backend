@@ -56,7 +56,7 @@ public class UserFacade {
             
             //Throws error if username exists
             if(em.find(User.class, user.getUserName()) != null){
-                throw new NotFoundException("Username already exists");
+                throw new API_Exception("Username already exists",404);
             }
             //Makes sure roles is managed objects and checks that it exist
             for (int i = 0; i < user.getRoleList().size(); i++) {
