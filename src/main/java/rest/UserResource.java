@@ -9,6 +9,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dtos.user.UserDTO;
 import entities.User;
 import errorhandling.API_Exception;
 import errorhandling.GenericExceptionMapper;
@@ -40,6 +41,7 @@ import utils.EMF_Creator;
 public class UserResource {
     private static final EntityManagerFactory EMF = EMF_Creator.createEntityManagerFactory();
     public static final UserFacade USER_FACADE = UserFacade.getUserFacade(EMF);
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     
     @Context
     private UriInfo context;
@@ -50,36 +52,12 @@ public class UserResource {
     public UserResource() {
     }
 
-    @Path("create")
     @POST
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Consumes({MediaType.APPLICATION_JSON})
     @Produces({MediaType.APPLICATION_JSON})
-    public Response createUser(String jsonString) throws API_Exception {
-        String username;
-        String password;
-        ArrayList<String> roles = new ArrayList<>();
-        roles.add("admin");
-        
-        GsonBuilder gsonb = new GsonBuilder();
-        Gson gson = gsonb.create();
-        
-        try {
-            JsonObject json = JsonParser.parseString(jsonString).getAsJsonObject();
-            username = json.get("username").getAsString();
-            password = json.get("password").getAsString();
-            System.out.println("Roles format "+ json.get("roles") );
-        } catch (Exception e) {
-            throw new API_Exception("Malformed JSON Suplied", 400, e);
-        }
-        
-        try {
-            User user = USER_FACADE.createUser(username, password, roles);
-            JsonObject responseJson = new JsonObject();
-            responseJson.addProperty("username", username);
-            return Response.ok(new Gson().toJson(responseJson)).build();
-        } catch (Exception ex) {
-            Logger.getLogger(GenericExceptionMapper.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        throw new API_Exception("An error occured. Sorry for the inconvinience");
+    public Response createUser(String jsonString) throws API_Exception, Exception {
+        UserDTO userDTO = gson.fromJson(jsonString, UserDTO.class);
+        UserDTO newUserDTO = USER_FACADE.createUser(userDTO);
+        return Response.ok().entity(gson.toJson(newUserDTO)).build();
     }
 }

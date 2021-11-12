@@ -1,8 +1,10 @@
 package facades;
 
+import dtos.user.UserDTO;
 import entities.User;
 import entities.Role;
 import errorhandling.API_Exception;
+import errorhandling.NotFoundException;
 import java.util.ArrayList;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -46,30 +48,21 @@ public class UserFacade {
         return user;
     }
     
-    public User createUser(String username, String password, ArrayList<String> userRole) throws Exception {
-        EntityManager em = emf.createEntityManager();
-        User user;
+    public UserDTO createUser(UserDTO userDTO) throws Exception {
+       User user = userDTO.getEntity();
+       EntityManager em = emf.createEntityManager();
         try {
-            user = em.find(User.class, username);
-            if (user != null) {
-                throw new API_Exception("Username already exist. Try again");
-            }
-            user = new User(username, password);
-            for (String r : userRole) {
-                Role role = em.find(Role.class, r);
-                if (role == null){
-                    role = new Role(r);
-                }
-                user.addRole(role);
-            }
-            
             em.getTransaction().begin();
+            user.getRoleList().forEach(role->{
+                role = em.find(Role.class, role.getRoleName());
+                //TODO: Do something if role doesnt exist 
+            });
             em.persist(user);
             em.getTransaction().commit();
         } finally {
             em.close();
         }
-        return user;
+        return new UserDTO(user);
     }
 
 }
