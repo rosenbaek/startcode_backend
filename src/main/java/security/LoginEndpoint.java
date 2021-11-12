@@ -1,6 +1,9 @@
 package security;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.nimbusds.jose.JOSEException;
@@ -10,6 +13,7 @@ import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import entities.Role;
 import facades.UserFacade;
 import java.util.Date;
 import java.util.List;
@@ -34,6 +38,7 @@ public class LoginEndpoint {
     public static final int TOKEN_EXPIRE_TIME = 1000 * 60 * 30; //30 min
     private static final EntityManagerFactory EMF = EMF_Creator.createEntityManagerFactory();
     public static final UserFacade USER_FACADE = UserFacade.getUserFacade(EMF);
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -55,6 +60,14 @@ public class LoginEndpoint {
             JsonObject responseJson = new JsonObject();
             responseJson.addProperty("username", username);
             responseJson.addProperty("token", token);
+            //adds roles to json response
+            if(!user.getRoleList().isEmpty()){
+                JsonArray jsonArray = new JsonArray();
+                for (Role role : user.getRoleList()) {
+                    jsonArray.add(role.getRoleName());
+                }
+                responseJson.add("roles", jsonArray);
+            }
             return Response.ok(new Gson().toJson(responseJson)).build();
 
         } catch (JOSEException | AuthenticationException ex) {
