@@ -16,6 +16,7 @@ import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 import static org.hamcrest.Matchers.equalTo;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -92,6 +93,7 @@ public class LoginEndpointTest {
 
     //This is how we hold on to the token after login, similar to that a client must store the token somewhere
     private static String securityToken;
+
 
     //Utility method to login and set the returned securityToken
     private static void login(String role, String password) {
@@ -219,6 +221,31 @@ public class LoginEndpointTest {
                 .statusCode(403)
                 .body("code", equalTo(403))
                 .body("message", equalTo("Not authenticated - do login"));
+    }
+    
+    @Test
+    public void testCreateUser() {
+        String username = "new_test_user";
+        String json = String.format("{\"username\": \"%s\", \"password\": \"%s\", \"roles\": [{\"rolename\":\"%s\"}]}", username, "pas123", "user");
+        given()
+                .contentType("application/json")
+                .body(json)
+                .when().post("/user")
+                .then()
+                .body("username", equalTo(username));
+    }
+    
+    @Test
+    public void testCreateUserWithExistingUsername() {
+        String username = "user";
+        String json = String.format("{\"username\": \"%s\", \"password\": \"%s\", \"roles\": [{\"rolename\":\"%s\"}]}", username, "pas123", "user");
+        given()
+                .contentType("application/json")
+                .body(json)
+                .when().post("/user")
+                .then()
+                .body("message", equalTo("Username already exists"));
+        //Assertions.assertEquals("Username already exists", result);
     }
 
 }
