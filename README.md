@@ -4,6 +4,7 @@ How to use:
     - <name> Enter your project name </name>
     - <remote.server> Enter the URL to your tomcat manager/text </remote.server>
     - <db.name> Enter the name of your database </db.name>
+	- <artifactId> Will be name of the WAR file and hence the url extension on droplet </artifactId>
 
 : Update persistence.xml with the following fields.
     - Update JDBC string to your new database for PROD
